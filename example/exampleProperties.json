@@ -1,0 +1,12 @@
+{
+    "listen": {
+	"port": 1889
+    },
+    "static": {
+	"path": "/static",
+	"options": {
+	    "maxAge": 86400000,
+	    "redirect": true
+	}
+    }
+}

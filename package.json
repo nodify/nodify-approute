@@ -1,0 +1,27 @@
+{
+  "name": "nodify-approute",
+  "description": "Connect middleware for connecting JSON app calls to js objects.",
+  "maintainers": [
+    {
+      "name": "Meadhbh Hamrick",
+      "email": "OhMeadhbh@gmail.com",
+      "web": "http://meadhbh.org/"
+    }
+  ],
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "https://github.com/OhMeadhbh/nodify-approute/raw/master/LICENSE"
+    }
+  ],
+  "repositories": [
+    {
+      "type": "git",
+      "url": "https://github.com/OhMeadhbh/nodify-approute"
+    }
+  ],
+  "directories": [ "test", "example" ],
+  "version": "0.0.1",
+  "main": "./lib/nodify-approute.js",
+  "keywords": [ "request router", "router", "http", "JSON", "api" ]
+}
