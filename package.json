@@ -21,7 +21,7 @@
     }
   ],
   "directories": [ "test", "example" ],
-  "version": "0.0.2",
+  "version": "0.0.3",
   "main": "./nodify-approute.js",
   "keywords": [ "request router", "router", "http", "JSON", "api" ]
 }
