@@ -20,8 +20,11 @@
       "url": "https://github.com/OhMeadhbh/nodify-approute"
     }
   ],
+  "dependencies": {
+    "mfunc": ">= 0.0.1"
+  },
   "directories": [ "test", "example" ],
-  "version": "0.0.3",
+  "version": "1.0.0",
   "main": "./nodify-approute.js",
   "keywords": [ "request router", "router", "http", "JSON", "api" ]
 }

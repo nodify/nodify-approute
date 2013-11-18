@@ -84,39 +84,47 @@ entity.
       routes: [
         {
           route: "/",
-          get: function( body, params, callback ) {
-            callback( "Are you sure you want to come here?" );
+          get: function( callback ) {
+            this.body.out = "Are you sure you want to come here?";
+            callback( this );
           }
         },
         {
           route: "/id",
-          post: function( body, params, callback ) {
-            if( body && body.name ) {
+          post: function( callback ) {
+            if( this.body.in && this.body.in.name ) {
               ids.push( body );
-              callback( { success: true, id: ids.length } );
+              this.body.out = { success: true, id: ids.length };
+              callback( this );
             } else {
-              callback( { success: false, error: 'bad request' } );
+              this.body.out = { success: false, error: 'bad request' };
+              callback( this );
             }
           }
         },
         {
           route: "/id/([0-9]{3})",
           params: [ "id" ],
-          get: function( body, params, callback ) {
-            if( params.id > 0 && params.id < ids.length ) {
-              callback( { success: true, item: ids[ params.id ] } );
+          get: function( callback ) {
+            if( this.params.id > 0 && this.params.id < ids.length ) {
+              this.body.out = { success: true, item: ids[ params.id ] };
+              callback( this );
             } else {
-              callback( { success: false, error: 'not found' } );
+              this.body.out = { success: false, error: 'not found' };
+              callback( this );
             }
           },
-          put: function( body, params, callback ) {
-            if( ! body ) {
-              callback( { success: false, error: 'bad request' } );
-            } else if( params.id > 0 && params.id < ids.length ) {
-              ids[ params.id ] = body;
-              callback( { success: true } );
+          put: function( callback ) {
+            if( ! this.body.in ) {
+              this.body.out = { success: false, error: 'bad request' };
+              callback( this );
+            } else if( this.params.id > 0 && this.params.id < ids.length ) {
+              ids[ params.id ] = this.body.in;
+              this.body.out = { success: true };
+              callback( this );
             } else {
-              callback( { success: false, error: 'not found' } );
+              this.body.out = { success: false, error: 'not found' };
+              callback( this );
             }
           }
         }

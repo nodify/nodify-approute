@@ -1,113 +1,136 @@
 ( function ( ) {
+  if( ! Object.prototype._$each ) {
+    require( 'mfunc' );
+  }
+
   var url = require( 'url' );
 
   function approute( options ) {
-    this.options = options;
+    this.options = options?options:{};
     this.routes = [];
   }
+
+  approute.prototype.buildRoutes = function () {
+    this.routes = this.options.routes._$map( function( e ) {
+      return new RegExp( '^' + e.route + '$' ); 
+    } );
+  };
 
   approute.prototype.init = function ( callback ) {
     var that = this;
 
-    for( var i = 0, il = this.options.routes.length; i < il; i++ ) {
-      this.routes.push(  new RegExp( '^' + this.options.routes[i].route + '$' ) );
-    }
+    this.buildRoutes();
 
-    function _approute_function ( request, response, next ) {
-      var current, paramblock, body, params;
+    callback && callback( function ( request, response, next ) {
+      var current, paramblock, _f;
 
-      params = { url: url.parse( 'http://' + request.headers.host + request.url ) };
-      delete( params.url.protocol );
-      delete( params.url.href );
+      var context = {
+        url: url.parse( "http://" + request.headers.host + request.url ),
+        params: {},
+        headers: {
+          in: request.headers,
+          out: []
+        },
+        cookies: {
+          in: {},
+          out: {}
+         },
+         body: {}
+      };
 
-      for( var i = 0, il = that.routes.length; i < il; i++ ) {
-	paramblock = that.routes[ i ].exec( params.url.pathname );
-	if( paramblock ) {
-	  current = that.options.routes[ i ];
-	  break;
-	}
-      }
+      delete context.url.protocol;
+      delete context.url.href;
+
+      that.routes._$each( function ( e, i ) {
+        paramblock = e.exec( context.url.pathname );
+        if( paramblock ) {
+          current = that.options.routes[i];
+        }
+      } );
 
       if( ! current ) {
-	response.statusCode = 404;
-	return( next( 404 ) );
+        response.statusCode = 404;
+        return next( 404 );
       }
 
-      var method = request.method.toLowerCase();
-      if( 'function' !== typeof current[ method ] ) {
-	response.statusCode = 405;
-	return( next( 405 ) );
+      context.method = request.method.toLowerCase();
+      _f = current[ context.method ];
+      if( 'function' !== typeof _f ) {
+        response.statusCode = 405;
+        return next( 405 );
       }
 
-      var content_type = request.headers[ 'content-type' ];
-      if( content_type && ( 'application/json' !== content_type ) ) {
-	response.statusCode = 415;
-	return( next( 415 ) );
+      if( request.headers[ 'content-type' ] &&
+          ( 'application/json' !== request.headers[ 'content-type' ] ) ) {
+        response.statusCode = 415;
+        return next( 415 );
       }
 
-      if( paramblock.length > 1 && current.params ) {
+      if( paramblock && paramblock.length > 1 && current.params ) {
         for( var i = 0, il = paramblock.length - 1, pl = current.params.length; (i < il) && (i < pl); i++ ) {
-	  params[ current.params[ i ] ] = paramblock[ i + 1 ];
+          context.params[ current.params[ i ] ] = paramblock[ i + 1 ];
         }
       }
 
-      if( 'function' === typeof current.validate ) {
-	return( current.validate( params, _do_body ) );
-      } else {
-	_do_body( true );
-      }
+      context.headers.in && context.headers.in._$each( function( e, i ) {
+        if( 'cookie' == i ) {
+          e.split( "; " )._$each( function( e ) {
+            var cookie = e.split( "=" );
+            context.cookies.in[ cookie[0] ] = cookie[1];
+          } );
+        }
+      } );
 
-      function _do_body ( okay ) {
-	if( false === okay ) {
-	  response.statusCode = 404;
-	  return( next( "404 Not Found" ) );
-	}
+      var body = "";
 
-	body = "";
-	request.on( 'data', function ( chunk ) {
-	  body += chunk;
-	} );
+      request.on( 'data', function ( chunk ) {
+        body += chunk;
+      } );
 
-	request.on( 'end', function () {
-	  var parsed_body;
+      request.on( 'end', function () {
+        if( body ) {
+          if( request.headers[ 'content-type' ] == 'application/json' ) {
+            try {
+              context.body.in = JSON.parse( body );
+            } catch( e ) {
+              context.body.in = {};
+            }
+          } else {
+            context.body.in = body;
+          }
+        }
 
-	  try {
-	    parsed_body = JSON.parse( body );
-	  } catch( e ) {
-	    parsed_body = {};
-	  }
+        _f.call( context, function( c ) {
+          var output;
 
-	  current[ method ]( parsed_body, params, function( _r ) {
-	    var data;
-	    var content_type;
+          var headers = c.headers.out;
 
-	    if( 'string' === typeof _r ) {
-	      data = _r;
-	      content_type = 'text/plain';
-	    } else {
-	      data = JSON.stringify( _r );
-	      content_type = 'application/json';
-	    }
+          if( c.body.out ) {
+            if( 'object' == typeof c.body.out ) {
+              output = JSON.stringify( c.body.out );
+              headers.push( [ 'content-type', 'application/json' ] );
+            } else {
+              output = c.body.out.toString();
+              headers.push( [ 'content-type', 'text/plain' ] );
+            }
+            headers.push( [ 'content-length', output.length ] );
+          }
 
-	    var headers = {};
-	    
-	    if( data.length > 0 ) {
-	      headers[ 'Content-Type' ] = content_type;
-	      headers[ 'Content-Length' ] = data.length;
-	    }
+          c.cookies.out._$each( function( e, i ) {
+            headers.push( [ 'Set-Cookie', i + '=' + e ] );
+          } );
 
-	    response.writeHead( 200, headers );
-	    response.end( data );
-	  } );
-	  
-	} );
-      }
-    }
-    callback( _approute_function, this );
+          response.writeHead( 200, headers );
+          response.end( output );
+        } ); 
+
+      } );
+
+    }, this );
   }
 
-  exports.createInstance = function ( options ) {
-    return( new approute( options ) );
-  };
+  if( module && module.exports ) {
+    module.exports = approute;
+  }
 
 } )();
